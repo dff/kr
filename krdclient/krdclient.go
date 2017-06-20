@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/blang/semver"
 	"github.com/kryptco/kr"
@@ -136,6 +137,36 @@ func RequestGitSignature(request kr.Request) (response kr.GitSignResponse, err e
 	return
 }
 
+func RequestBlobSignatureOver(request kr.Request, conn net.Conn) (blobSignResponse kr.BlobSignResponse, err error) {
+	response, err := makeRequestWithJsonResponse(conn, request)
+	if err != nil {
+		return
+	}
+
+	if response.BlobSignResponse != nil {
+		blobSignResponse = *response.BlobSignResponse
+		return
+	}
+	err = fmt.Errorf("Response missing BlobSignResponse")
+	return
+}
+
+func RequestBlobSignature(request kr.Request) (response kr.BlobSignResponse, err error) {
+	unixFile, err := kr.KrDirFile(kr.DAEMON_SOCKET_FILENAME)
+	if err != nil {
+		err = kr.ErrConnectingToDaemon
+		return
+	}
+	daemonConn, err := kr.DaemonDialWithTimeout(unixFile)
+	if err != nil {
+		err = kr.ErrConnectingToDaemon
+		return
+	}
+	defer daemonConn.Close()
+	response, err = RequestBlobSignatureOver(request, daemonConn)
+	return
+}
+
 func makeRequestWithJsonResponse(conn net.Conn, request kr.Request) (response kr.Response, err error) {
 	httpRequest, err := request.HTTPRequest()
 	if err != nil {
@@ -156,6 +187,7 @@ func makeRequestWithJsonResponse(conn net.Conn, request kr.Request) (response kr
 	}
 	defer httpResponse.Body.Close()
 	if httpResponse.StatusCode == http.StatusNotFound {
+		os.Stdout.WriteString("bad status code: not found")
 		err = kr.ErrNotPaired
 		return
 	}
