@@ -143,7 +143,7 @@ func (bsr BlobSignResponse) AsciiArmorSignature(isDetached bool) (s string, err 
 		header = "PGP MESSAGE"
 	}
 
-	input, err := armor.Encode(output, header, map[string]string{"Comment": "Created With Kryptonite"})
+	input, err := armor.Encode(output, header, map[string]string{"Comment": "Created with Kryptonite"})
 	if err != nil {
 		return
 	}
